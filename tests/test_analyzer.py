@@ -1,4 +1,5 @@
 import pytest
+
 from logpulse.analyzer import LogAnalyzer
 
 

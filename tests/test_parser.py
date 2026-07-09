@@ -1,4 +1,5 @@
 import pytest
+
 from logpulse.parser import parse_line
 
 

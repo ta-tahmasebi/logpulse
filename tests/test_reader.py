@@ -1,7 +1,9 @@
 import gzip
 import zipfile
 from pathlib import Path
+
 import pytest
+
 from logpulse.reader import log_reader
 
 
