@@ -1,33 +1,26 @@
-import sys
-
-from logpulse.parser import parse_line
-from logpulse.reader import log_reader
+from logpulse.logger import draw_table, draw_chart
 
 
-def run_pipeline(file_path: str) -> None:
-    total_lines = 0
-    failed_lines = 0
+def run_visual_test() -> None:
+    headers = ["IP Address", "Request Count", "Bandwidth (GB)", "Status"]
+    rows = [
+        ["192.168.1.1", "12450", "45.2", "Active"],
+        ["10.0.0.5", "8432", "12.8", "Active"],
+        ["172.16.0.22", "2105", "98.1", "Throttled"],
+        ["192.168.1.50", "120", "0.4", "Blocked"],
+    ]
 
-    try:
-        for idx, line in enumerate(log_reader(file_path), 1):
-            total_lines += 1
-            if parse_line(line) is None:
-                failed_lines += 1
-                print(f"[ERROR] Line {idx}: {line.strip()[:80]}")
+    chart_data = {
+        "GET": 4500,
+        "POST": 1800,
+        "PUT": 600,
+        "DELETE": 150,
+        "PATCH": 50,
+    }
 
-        print("\n" + "=" * 40)
-        print(f"Total Lines:  {total_lines}")
-        print(f"Successfully Parsed: {total_lines - failed_lines}")
-        print(f"Failed Lines: {failed_lines}")
-        print("=" * 40)
-
-    except Exception as error:
-        print(f"Execution failed: {error}")
+    draw_table("Top Traffic Consumers", headers, rows)
+    draw_chart("HTTP Methods Distribution", chart_data, use_plt=True)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <path_to_log_file>")
-        sys.exit(1)
-
-    run_pipeline(sys.argv[1])
+    run_visual_test()
