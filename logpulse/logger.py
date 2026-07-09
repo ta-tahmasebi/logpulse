@@ -21,10 +21,6 @@ if not _root_logger.handlers:
     file_handler.setFormatter(formatter)
     _root_logger.addHandler(file_handler)
 
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    _root_logger.addHandler(stream_handler)
-
 
 def get_logger(module_name: str) -> logging.Logger:
     return logging.getLogger(f"{_NAME}.{module_name}")
@@ -66,15 +62,47 @@ def draw_chart(title: str, data: dict[str, int | float], use_plt: bool = False) 
         print(output)
         _OUT_DIR.joinpath(f"{name}_ascii.txt").write_text(output, encoding=_ENCODING)
 
-    if use_plt:
+    if use_plt and data:
         try:
             import matplotlib.pyplot as plt
-            plt.figure(figsize=(8, 4))
-            plt.bar(data.keys(), data.values())
-            plt.title(title)
-            plt.xticks(rotation=45, ha="right")
+
+            x_data = list(data.keys())
+            y_data = list(data.values())
+
+            fig, ax = plt.subplots(figsize=(10, 5))
+
+            bars = ax.bar(x_data, y_data, color="#2b5c8f", edgecolor="#1a3656", width=0.5)
+
+            ax.set_title(title, fontsize=14, fontweight="bold", pad=15)
+            ax.set_xlabel("Metrics", fontsize=11, labelpad=10)
+            ax.set_ylabel("Volume", fontsize=11, labelpad=10)
+
+            ax.grid(axis="y", linestyle="--", alpha=0.5)
+            ax.set_axisbelow(True)
+
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.spines["left"].set_color("#cccccc")
+            ax.spines["bottom"].set_color("#cccccc")
+
+            plt.xticks(rotation=45, ha="right", fontsize=9)
+            plt.yticks(fontsize=9)
+
+            for bar in bars:
+                height = bar.get_height()
+                ax.annotate(
+                    f"{int(height) if height.is_integer() else height}",
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3),
+                    textcoords="offset points",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                    fontweight="bold"
+                )
+
             plt.tight_layout()
-            plt.savefig(_OUT_DIR / f"{name}.png")
+            plt.savefig(_OUT_DIR / f"{name}.png", dpi=300)
             plt.close()
         except ImportError:
             get_logger("logger").error("Matplotlib is not installed. Graphical chart skipped.")
