@@ -56,4 +56,5 @@ Thumbs.db
 *.gz
 *.zip
 *.pdf
+results/
 !requirements.txt
