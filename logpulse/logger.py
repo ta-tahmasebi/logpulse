@@ -4,9 +4,9 @@ from typing import Any
 
 _ENCODING: str = 'utf-8'
 _NAME: str = 'logpulse'
-_OUT_DIR = Path('results')
+OUT_DIR = Path('results')
 
-_OUT_DIR.mkdir(exist_ok=True)
+OUT_DIR.mkdir(exist_ok=True)
 
 _root_logger = logging.getLogger(_NAME)
 _root_logger.setLevel(logging.INFO)
@@ -46,7 +46,7 @@ def draw_table(title: str, headers: list[str], rows: list[list[Any]]) -> None:
     print(output)
 
     name = title.lower().replace(" ", "_")
-    _OUT_DIR.joinpath(f"{name}.txt").write_text(output, encoding=_ENCODING)
+    OUT_DIR.joinpath(f"{name}.txt").write_text(output, encoding=_ENCODING)
 
 
 def draw_chart(title: str, data: dict[str, int | float], use_plt: bool = False) -> None:
@@ -60,7 +60,7 @@ def draw_chart(title: str, data: dict[str, int | float], use_plt: bool = False) 
             lines.append(f"{k:<15} | {bar} ({v})")
         output = "\n".join(lines)
         print(output)
-        _OUT_DIR.joinpath(f"{name}_ascii.txt").write_text(output, encoding=_ENCODING)
+        OUT_DIR.joinpath(f"{name}_ascii.txt").write_text(output, encoding=_ENCODING)
 
     if use_plt and data:
         try:
@@ -102,7 +102,7 @@ def draw_chart(title: str, data: dict[str, int | float], use_plt: bool = False) 
                 )
 
             plt.tight_layout()
-            plt.savefig(_OUT_DIR / f"{name}.png", dpi=300)
+            plt.savefig(OUT_DIR / f"{name}.png", dpi=300)
             plt.close()
         except ImportError:
             get_logger("logger").error("Matplotlib is not installed. Graphical chart skipped.")

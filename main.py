@@ -1,9 +1,11 @@
 import argparse
+import json
 import sys
 import time
+from pathlib import Path
 
 from logpulse.analyzer import LogAnalyzer
-from logpulse.logger import draw_table, draw_chart, get_logger
+from logpulse.logger import draw_table, draw_chart, get_logger, OUT_DIR
 from logpulse.parser import parse_line
 from logpulse.reader import log_reader
 
@@ -16,9 +18,14 @@ def main() -> None:
     parser.add_argument("--top", type=int, default=10, help="Number of top endpoints/IPs to display (Default: 10)")
     parser.add_argument("--chart", action="store_true", help="Enable graphical chart generation using Matplotlib")
     parser.add_argument("--secure-threshold", type=int, default=5, help="Threshold for failed logins detection (401)")
+    parser.add_argument("--json", action="store_true", help="Export metrics report to results/report.json")
 
     args = parser.parse_args()
     logger = get_logger("main")
+
+    if not Path(args.logfile).exists():
+        print(f"Error: File '{args.logfile}' not found. Please check the path.")
+        sys.exit(1)
 
     print("LogPulse execution started...")
     start_time = time.perf_counter()
@@ -72,6 +79,13 @@ def main() -> None:
         draw_table("Infrastructure Alert: Anomalous 5xx Error Code Spikes", spike_headers, spike_rows)
     else:
         print("\nInfrastructure Health: No critical 5xx error spikes detected.")
+
+    if args.json:
+        json_data = analyzer.get_json_report()
+        json_path = OUT_DIR / "report.json"
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(json_data, f, indent=4, ensure_ascii=False)
+        print(f"\nFull analytics report successfully exported to JSON: {json_path}")
 
 
 if __name__ == "__main__":

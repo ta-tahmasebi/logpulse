@@ -130,3 +130,43 @@ class LogAnalyzer:
             if share >= threshold_percent:
                 rows.append([f"{hour}:00", str(err_count), f"{share:.2f}%", "CRITICAL SPIKE"])
         return headers, rows
+
+    def get_json_report(self) -> dict[str, Any]:
+        total = self.total_requests or 1
+        error_rate = ((self.status_4xx + self.status_5xx) / total) * 100
+        total_gb = self.total_bytes / (1024 * 1024 * 1024)
+
+        return {
+            "system_overview": {
+                "total_processed_requests": self.total_requests,
+                "unique_client_ips": len(self.unique_ips),
+                "total_network_bandwidth_gb": round(total_gb, 4),
+                "total_4xx_errors": self.status_4xx,
+                "total_5xx_errors": self.status_5xx,
+                "total_error_rate_percent": round(error_rate, 2),
+                "failed_lines": self.failed_lines
+            },
+            "top_endpoints": {ep: count for ep, count in self.endpoints.most_common(10)},
+            "top_ips": {
+                ip: {
+                    "requests": count,
+                    "bandwidth_mb": round(self.ip_bandwidth[ip] / (1024 * 1024), 2)
+                }
+                for ip, count in self.ip_requests.most_common(10)
+            },
+            "http_methods": dict(self.methods),
+            "top_user_agents": {ua: count for ua, count in self.user_agents.most_common(5)},
+            "hourly_traffic": {f"{h}:00": self.hourly_traffic[h] for h in sorted(self.hourly_traffic.keys())},
+            "suspicious_activities": {
+                ip: count for ip, count in self.login_failures.items() if count >= 5
+            },
+            "critical_error_spikes": [
+                {
+                    "hour": f"{h}:00",
+                    "count": err_count,
+                    "share_percent": round((err_count / (self.hourly_traffic[h] or 1)) * 100, 2)
+                }
+                for h, err_count in self.hourly_5xx.items()
+                if (err_count / (self.hourly_traffic[h] or 1)) * 100 >= 5.0
+            ]
+        }
