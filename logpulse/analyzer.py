@@ -25,37 +25,54 @@ class LogAnalyzer:
 
     def process_line(self, parsed_data: Dict[str, str]) -> None:
         self.total_requests += 1
-        self.unique_ips.add(parsed_data["ip"])
-        self.ip_requests[parsed_data["ip"]] += 1
+        ip = parsed_data["ip"]
+        self.unique_ips.add(ip)
+        self.ip_requests[ip] += 1
 
-        endpoint = parsed_data["url"].split("?")[0]
+        url = parsed_data["url"]
+        qmark = url.find('?')
+        endpoint = url if qmark == -1 else url[:qmark]
         self.endpoints[endpoint] += 1
 
         self.methods[parsed_data["method"]] += 1
         self.user_agents[parsed_data["user_agent"]] += 1
 
         status = parsed_data["status"]
-        if status.startswith("4"):
+        first_char = status[0]
+        if first_char == '4':
             self.status_4xx += 1
             if status == "401" and endpoint == "/login":
-                self.login_failures[parsed_data["ip"]] += 1
-        elif status.startswith("5"):
+                self.login_failures[ip] += 1
+        elif first_char == '5':
             self.status_5xx += 1
 
-        try:
-            b = int(parsed_data["bytes"])
+        b_str = parsed_data["bytes"]
+        if b_str.isdigit():
+            b = int(b_str)
             self.total_bytes += b
-            self.ip_bandwidth[parsed_data["ip"]] += b
-        except (ValueError, KeyError):
-            pass
+            self.ip_bandwidth[ip] += b
 
-        try:
-            hour = parsed_data["time"].split(":")[1]
-            self.hourly_traffic[hour] += 1
-            if status.startswith("5"):
-                self.hourly_5xx[hour] += 1
-        except IndexError:
-            pass
+        hour = parsed_data.get('hour', '00')
+        self.hourly_traffic[hour] += 1
+        if first_char == '5':
+            self.hourly_5xx[hour] += 1
+
+    def merge(self, others: list["LogAnalyzer"]) -> None:
+        for other in others:
+            self.total_requests += other.total_requests
+            self.failed_lines += other.failed_lines
+            self.unique_ips.update(other.unique_ips)
+            self.endpoints += other.endpoints
+            self.status_4xx += other.status_4xx
+            self.status_5xx += other.status_5xx
+            self.hourly_traffic += other.hourly_traffic
+            self.hourly_5xx += other.hourly_5xx
+            self.login_failures += other.login_failures
+            self.total_bytes += other.total_bytes
+            self.ip_requests += other.ip_requests
+            self.ip_bandwidth += other.ip_bandwidth
+            self.methods += other.methods
+            self.user_agents += other.user_agents
 
     def get_base_metrics(self) -> Tuple[List[str], List[List[Any]]]:
         total = self.total_requests or 1
