@@ -54,9 +54,11 @@ python main.py <PATH_TO_LOG_FILE> [OPTIONS]
 ### Arguments:
 
 * `file_path` *(Required)*: Path to your log file (`.txt`, `.log`, `.gz`, `.zip`).
-* `--top`: Number of top entries to show for IPs and endpoints (Default: `10`).
-* `--json`: Outputs the results as a machine-readable JSON file.
-* `--chart`: Generates an hourly traffic chart (requires `matplotlib`).
+* `--top TOP`: Number of top entries to show for IPs and endpoints (Default: `10`).
+* `--chart`: Enable graphical chart generation (requires `matplotlib`).
+* `--secure-threshold SECURE_THRESHOLD`: Threshold for failed login detection on `/login` (Default: `5`).
+* `--json`: Export full analytics report to `results/report.json`.
+* `--workers WORKERS`: Number of parallel processes for multiprocessing. `0` = auto-detect CPU cores, `1` = single process (Default: `0`).
 
 **Output Storage:** To prevent cluttering your terminal, LogPulse automatically saves all structured outputs and charts into a `results/` directory.
 
@@ -208,3 +210,31 @@ The tool isn't just for counting hits; it's designed to help you quickly spot ac
 1. **Brute-force Attacks:** The IP `21.67.75.144` hit the server 7,464 times, and every single one was a `401 Unauthorized` on `/login`. This is clearly a brute-force or dictionary attack and should be blocked at the firewall level immediately.
 2. **Heavy Bot Traffic:** Automated tools like `python-requests` and `curl` make up over 40% of the traffic. Bots are eating up a massive amount of bandwidth, meaning it might be time to deploy a bot-management page or require API keys.
 3. **Backend Spikes (The 5xx Anomaly):** Between 04:00 and 06:00, server-side `5xx` errors spiked to 17.61%, even though overall traffic stayed completely flat. This rules out a simple traffic overload and points to an internal issue—maybe a heavy database cron job locking tables, or a bad morning deployment that needs to be rolled back.
+
+
+## Performance Benchmarks
+
+To see exactly where the original single-threaded engine was spending its time, I profiled it against a 500,000-line sample log using Python's built-in `cProfile`:
+
+```bash
+python -m cProfile -s tottime main.py access.log.zip
+
+```
+
+ Profiling tools inherently slow down execution. While the absolute execution times reported by the profiler were inflated, the *relative* distribution of CPU work highlighted two clear bottlenecks.
+
+### The Bottlenecks
+
+* **Metrics Aggregation (`process_line`):** Consumed **~47%** of total CPU time.
+* **Regex Parsing (`parse_line`):** Consumed **~33%** of total CPU time.
+
+### The Results
+
+Here is the real-world speed comparison for processing that exact same 500,000-line file:
+
+| Architecture | CPU Power Profile | Execution Time |
+| --- | --- | --- |
+| Single-Threaded | Normal | ~3.1 seconds |
+| Multiprocessing | Energy-Saver | ~1.7 seconds |
+| Multiprocessing | Performance | ~1.0 second |
+
